@@ -10,7 +10,7 @@ COPY ./webhooks/*.jar /opt/keycloak/providers/
 COPY ./themes/ /opt/keycloak/themes/
 
 # Build an optimized server image layer so Keycloak indexes the providers
-RUN /opt/keycloak/bin/kc.sh build
+RUN /opt/keycloak/bin/kc.sh build --cache=local
 
 # Start the optimized server
 ENTRYPOINT ["/opt/keycloak/bin/kc.sh"]
