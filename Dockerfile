@@ -10,8 +10,8 @@ COPY ./webhooks/*.jar /opt/keycloak/providers/
 COPY ./themes/ /opt/keycloak/themes/
 
 # Build an optimized server image layer so Keycloak indexes the providers
-RUN /opt/keycloak/bin/kc.sh build --cache=local
+RUN /opt/keycloak/bin/kc.sh build
 
-# Start the optimized server
+# Start the optimized server with local cache (no clustering)
 ENTRYPOINT ["/opt/keycloak/bin/kc.sh"]
-CMD ["start", "--optimized"]
+CMD ["start", "--optimized", "--cache=local"]
