@@ -14,9 +14,9 @@ docker run -p 8055:8080 \
   keycloak-custom
 
 ### Access the theme preview:
-Login page: http://localhost:8080/realms/master/protocol/openid-connect/auth
+Login page: http://localhost:8055/realms/master/protocol/openid-connect/auth
 
-Admin console: http://localhost:8080/admin (admin/admin)
+Admin console: http://localhost:8055/admin (admin/admin)
 
 ### Theme Configuration
 Theme is configured in theme.properties:
