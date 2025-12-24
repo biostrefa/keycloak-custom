@@ -1,0 +1,77 @@
+services:
+  postgres:
+    image: postgres:${POSTGRES_VERSION}
+    container_name: ${KEYCLOAK_CONTAINER}
+    hostname: ${KEYCLOAK_CONTAINER}
+    ports:
+      - "127.0.0.1:${KEYCLOAK_PG_PORT}:5432"
+    environment:
+      POSTGRES_DB: ${KEYCLOAK_PG_DB_NAME}
+      POSTGRES_USER: ${KEYCLOAK_PG_USER}
+      POSTGRES_PASSWORD: ${KEYCLOAK_PG_PASSWORD}
+    volumes:
+      - ${KEYCLOAK_DB_LOCATION}:/var/lib/postgresql/data
+    networks:
+      - keycloak
+      # - nginx-proxy-network
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${KEYCLOAK_PG_USER} -d ${KEYCLOAK_PG_DB_NAME}",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: always
+
+  keycloak:
+    # image: quay.io/keycloak/keycloak:${KEYCLOAK_VERSION}
+    image: ghcr.io/biostrefa/keycloak-custom:latest
+    container_name: keycloak26
+    command: start
+    ports:
+      - "8059:8080"
+    environment:
+      KC_PROXY_ADDRESS_FORWARDING: "true"
+      KC_HOSTNAME_STRICT: "false"
+      # KC_HOSTNAME: "auth.s.biostrefa.org"
+      KC_HOSTNAME: "https://auth.polishlink.info"
+      KC_PROXY: "edge"
+      KC_HTTP_ENABLED: "true"
+      KC_DB: "postgres"
+      KC_DB_URL: "jdbc:postgresql://${KEYCLOAK_CONTAINER}/${KEYCLOAK_PG_DB_NAME}"
+      KC_DB_USERNAME: ${KEYCLOAK_PG_USER}
+      KC_DB_PASSWORD: ${KEYCLOAK_PG_PASSWORD}
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN_NAME}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+      # VIRTUAL_HOST: "auth.s.biostrefa.org"
+      # VIRTUAL_PORT: "8080"
+      # LETSENCRYPT_HOST: "auth.s.biostrefa.org"
+      # LETSENCRYPT_EMAIL: "oskar@biostrefa.org"
+      WEBHOOK_HTTP_BASE_PATH: "https://demo-api.avizi.org/v1/auth/users/new"
+      WEBHOOK_HTTP_AUTH_USERNAME: "kc"
+      WEBHOOK_HTTP_AUTH_PASSWORD: "kcpass1234"
+      WEBHOOK_EVENTS_TAKEN: "REGISTER,REGISTER_ERROR,USER-CREATE"
+    networks:
+      - keycloak
+      # - nginx-proxy-network
+      - tunnels-network
+    restart: always
+
+# volumes:
+#   keycloak-postgresql:
+#     name: keycloak-postgresql
+#     external: true
+
+networks:
+  keycloak:
+    name: keycloak
+    external: true
+  # nginx-proxy-network:
+  #   name: nginx-proxy-network
+  #   external: true
+  tunnels-network:
+    name: tunnels-network
+    external: true
