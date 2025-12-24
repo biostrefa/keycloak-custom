@@ -15,6 +15,7 @@ docker run -p 8055:8080 \
 
 ### Access the theme preview:
 Login page: http://localhost:8080/realms/master/protocol/openid-connect/auth
+
 Admin console: http://localhost:8080/admin (admin/admin)
 
 ### Theme Configuration
