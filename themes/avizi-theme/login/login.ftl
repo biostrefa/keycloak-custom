@@ -64,6 +64,11 @@
                     <a href="${url.loginResetCredentialsUrl}">${msg("doForgotPassword")}</a>
                 </div>
             </#if>
+            <#if realm.registrationAllowed>
+                <div class="links">
+                    <a href="${url.registrationUrl}">${msg("doRegister")}</a>
+                </div>
+            </#if>
         </div>
     </div>
 </body>
