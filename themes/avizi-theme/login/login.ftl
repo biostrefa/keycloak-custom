@@ -65,11 +65,12 @@
                 </div>
             </#if>
             <#if realm.registrationAllowed>
-                <div class="links">
-                    <a href="${url.registrationUrl}">${msg("doRegister")}</a>
+                <div class="form-group" style="margin-top: 1.5rem;">
+                    <a href="${url.registrationUrl}" class="register-button">
+                        ${msg("doRegister")}
+                    </a>
                 </div>
             </#if>
-        </div>
     </div>
 </body>
 </html>
