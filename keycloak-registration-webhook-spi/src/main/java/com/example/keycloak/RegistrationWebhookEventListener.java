@@ -26,7 +26,7 @@ public class RegistrationWebhookEventListener implements EventListenerProvider {
 
     // Hard-code for start – better to read from SPI config / env / DB later
     private static final String BASE_URL = "https://demo-api.avizi.org/";
-    private static final URI WEBHOOK_URI = URI.create(BASE_URL).resolve("/v1/user/new");
+    private static final URI WEBHOOK_URI = URI.create(BASE_URL).resolve("/v1/auth/users/new");
     private static final String KEYCLOAK_API_KEY = System.getenv("KEYCLOAK_API_KEY");
 
     public RegistrationWebhookEventListener(KeycloakSession session) {
