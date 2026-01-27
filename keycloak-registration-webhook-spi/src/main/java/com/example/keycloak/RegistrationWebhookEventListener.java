@@ -5,6 +5,8 @@ import org.keycloak.events.Event;
 import org.keycloak.events.EventListenerProvider;
 import org.keycloak.events.EventType;
 import org.keycloak.events.admin.AdminEvent;
+import org.keycloak.events.admin.OperationType;
+import org.keycloak.events.admin.ResourceType;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.UserModel;
 
@@ -82,7 +84,55 @@ public class RegistrationWebhookEventListener implements EventListenerProvider {
 
     @Override
     public void onEvent(AdminEvent adminEvent, boolean includeRepresentation) {
-        // optional: listen to admin CREATE_USER too
+        if (adminEvent.getResourceType() != ResourceType.USER || adminEvent.getOperationType() != OperationType.CREATE) {
+            return;
+        }
+
+        try {
+            // For admin events, the userId might be in the resourcePath or representation
+            String userId = adminEvent.getResourcePath().substring(adminEvent.getResourcePath().lastIndexOf('/') + 1);
+            UserModel user = session.users().getUserById(session.getContext().getRealm(), userId);
+            if (user == null) return;
+
+            // Create JSON payload using string formatting to avoid additional dependencies
+            String json = String.format(
+                "{\"event\":\"USER_CREATED\",\"timestamp\":\"%s\",\"userId\":\"%s\",\"username\":\"%s\",\"email\":\"%s\",\"firstName\":\"%s\",\"lastName\":\"%s\",\"attributes\":%s,\"realm\":\"%s\"}",
+                Instant.now().toString(),
+                escapeJson(userId),
+                escapeJson(user.getUsername()),
+                escapeJson(user.getEmail() != null ? user.getEmail() : ""),
+                escapeJson(user.getFirstName() != null ? user.getFirstName() : ""),
+                escapeJson(user.getLastName() != null ? user.getLastName() : ""),
+                mapToJson(user.getAttributes() != null ? user.getAttributes() : Map.of()),
+                escapeJson(session.getContext().getRealm().getName())
+            );
+
+            HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
+                .uri(WEBHOOK_URI)
+                .header("Content-Type", "application/json");
+
+            if (KEYCLOAK_API_KEY != null && !KEYCLOAK_API_KEY.isBlank()) {
+                requestBuilder.header("Authorization", "Bearer " + KEYCLOAK_API_KEY);
+            }
+
+            HttpRequest request = requestBuilder
+                .POST(HttpRequest.BodyPublishers.ofString(json))
+                .build();
+
+            httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                .whenComplete((resp, ex) -> {
+                    if (ex != null) {
+                        log.error("Admin user creation webhook failed", ex);
+                    } else if (resp.statusCode() >= 300) {
+                        log.warnf("Admin user creation webhook failed → %d %s", resp.statusCode(), resp.body());
+                    } else {
+                        log.info("Admin user creation webhook delivered");
+                    }
+                });
+
+        } catch (Exception e) {
+            log.error("Error sending admin user creation webhook", e);
+        }
     }
 
     @Override
