@@ -22,11 +22,13 @@ public class RegistrationWebhookEventListener implements EventListenerProvider {
     private static final Logger log = Logger.getLogger(RegistrationWebhookEventListener.class);
 
     private final KeycloakSession session;
-    private final HttpClient httpClient = HttpClient.newHttpClient();
+    private final HttpClient httpClient = HttpClient.newBuilder()
+        .followRedirects(HttpClient.Redirect.ALWAYS)
+        .build();
 
     // Hard-code for start – better to read from SPI config / env / DB later
-    private static final String BASE_URL = "https://demo-api.avizi.org/";
-    private static final URI WEBHOOK_URI = URI.create(BASE_URL).resolve("/v1/auth/users/new");
+    private static final String BASE_URL = "https://demo-api.avizi.org";
+    private static final URI WEBHOOK_URI = URI.create(BASE_URL + "/v1/auth/users/new");
     private static final String KEYCLOAK_API_KEY = System.getenv("KEYCLOAK_API_KEY");
 
     public RegistrationWebhookEventListener(KeycloakSession session) {
