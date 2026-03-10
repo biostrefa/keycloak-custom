@@ -23,7 +23,8 @@ FROM quay.io/keycloak/keycloak:${KEYCLOAK_VERSION} AS builder
 
 # Build-time options that should be baked into the optimized image
 ENV KC_HEALTH_ENABLED=true \
-    KC_METRICS_ENABLED=true
+    KC_METRICS_ENABLED=true \
+    KC_DB=postgres
 
 WORKDIR /opt/keycloak
 
