@@ -17,7 +17,7 @@
 #         ├── email/          # optional
 #         └── theme.properties
 
-ARG KEYCLOAK_VERSION=26.4.0
+ARG KEYCLOAK_VERSION=26.6.0
 
 FROM quay.io/keycloak/keycloak:${KEYCLOAK_VERSION} AS builder
 
