@@ -11,8 +11,8 @@ Type=oneshot
 RemainAfterExit=yes
 # Use existing containers: the role removes Compose files and secrets.
 # If PostgreSQL cannot bind its port yet, retry before starting Keycloak.
-ExecStart=/usr/bin/docker start kc-postgres26
-ExecStart=/usr/bin/docker start keycloak26
+ExecStart=/usr/bin/docker start {{ postgres_container_name }}
+ExecStart=/usr/bin/docker start {{ keycloak_container_name }}
 Restart=on-failure
 RestartSec=15s
 TimeoutStartSec=120s

@@ -1,2 +1,7 @@
-keycloak_config_path: /home/oski/apps_configs/keycloak26
-keycloak_db_path: /home/oski/apps_dbs/keycloak26
+keycloak_config_location: /home/oski/apps_configs/keycloak26
+keycloak_db_location: /home/oski/apps_dbs/keycloak26
+
+keycloak_version: "26.8.0"
+keycloak_container_name: "keycloak26"
+postgres_version: 17
+postgres_container_name: "kc-postgres26"

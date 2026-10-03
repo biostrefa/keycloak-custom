@@ -1,7 +1,7 @@
 ---
 # - name: Ensure the keycloak directory exists
 #   file:
-#     path: "{{ keycloak_config_path }}"
+#     path: "{{ keycloak_config_location }}"
 #     state: directory
 #     mode: "0755"
 # - name: Ensure the postgres directory exists
@@ -25,44 +25,58 @@
     # owner: oski
     # group: oski
   loop:
-    - "{{ keycloak_config_path }}"
-    - "{{ keycloak_db_path }}"
+    - "{{ keycloak_config_location }}"
+    - "{{ keycloak_db_location }}"
+    # - "{{ keycloak_db_location }}/pg_data"
 
 - name: Set variables from Bitwarden
   set_fact:
-    keycloak_pg_db_name: "{{ lookup('community.general.bitwarden', 'hatchlon_keycloak', field='POSTGRES_DB')[0] }}"
-    keycloak_pg_user: "{{ lookup('community.general.bitwarden', 'hatchlon_keycloak', field='POSTGRES_USER')[0] }}"
-    keycloak_pg_password: "{{ lookup('community.general.bitwarden', 'hatchlon_keycloak', field='POSTGRES_PASSWORD')[0] }}"
-    keycloak_pg_port: "{{ lookup('community.general.bitwarden', 'hatchlon_keycloak', field='POSTGRES_PORT')[0] }}"
+    postgres_db: "{{ lookup('community.general.bitwarden', 'hatchlon_keycloak', field='POSTGRES_DB')[0] }}"
+    postgres_user: "{{ lookup('community.general.bitwarden', 'hatchlon_keycloak', field='POSTGRES_USER')[0] }}"
+    postgres_password: "{{ lookup('community.general.bitwarden', 'hatchlon_keycloak', field='POSTGRES_PASSWORD')[0] }}"
+    postgres_port: "{{ lookup('community.general.bitwarden', 'hatchlon_keycloak', field='POSTGRES_PORT')[0] }}"
     keycloak_admin_name: "{{ lookup('community.general.bitwarden', 'hatchlon_keycloak', field='KEYCLOAK_ADMIN_NAME')[0] }}"
     keycloak_admin_password: "{{ lookup('community.general.bitwarden', 'hatchlon_keycloak', field='KEYCLOAK_ADMIN_PASSWORD')[0] }}"
     keycloak_api_key: "{{ lookup('community.general.bitwarden', 'hatchlon_keycloak', field='KEYCLOAK_API_KEY')[0] }}"
+    webhook_http_auth_password: "{{ lookup('community.general.bitwarden', 'hatchlon_keycloak', field='WEBHOOK_HTTP_AUTH_PASSWORD')[0] }}"
   no_log: true
 
-- name: Generate .env file from template
+# - name: Generate .env file from template
+#   template:
+#     src: .env.j2
+#     dest: "{{ keycloak_config_location }}/.env"
+#     mode: "0600"
+- name: Generate compose file from template
   template:
-    src: .env.j2
-    dest: "{{ keycloak_config_path }}/.env"
+    src: docker-compose.yml.j2
+    dest: "{{ keycloak_config_location }}/docker-compose.yml"
     mode: "0600"
+  no_log: true
 
-- name: copy Docker Compose files
-  copy:
-    src: files/{{ item }}
-    dest: "{{ keycloak_config_path }}/{{ item }}"
-  loop:
-    - docker-compose.yml
+# - name: copy Docker Compose files
+#   copy:
+#     src: files/{{ item }}
+#     dest: "{{ keycloak_config_location }}/{{ item }}"
+#   loop:
+#     - docker-compose.yml
+# -
+- name: Allow binding to the Tailscale IP before it exists
+  ansible.posix.sysctl:
+    name: net.ipv4.ip_nonlocal_bind
+    value: "1"
+    sysctl_file: /etc/sysctl.d/99-nonlocal-bind.conf
+    reload: true
+  become: true
 
 # use files parameter to use multiple docker-compose.yml files
 - name: deploy Docker Compose stack
   community.docker.docker_compose_v2:
-    project_src: "{{ keycloak_config_path }}"
+    project_src: "{{ keycloak_config_location }}"
     files:
       - docker-compose.yml
     pull: always
     recreate: always
     # - docker-compose.prod.yml
-  environment:
-    KEYCLOAK_API_KEY: "{{ keycloak_api_key }}"
   no_log: true
   register: output
 
@@ -86,12 +100,7 @@
 
 - name: Remove uploaded docker-compose file after deployment
   ansible.builtin.file:
-    path: "{{ keycloak_config_path }}/docker-compose.yml"
-    state: absent
-
-- name: Remove uploaded .env file after deployment
-  ansible.builtin.file:
-    path: "{{ keycloak_config_path }}/.env"
+    path: "{{ keycloak_config_location }}/docker-compose.yml"
     state: absent
 
 - name: Show results

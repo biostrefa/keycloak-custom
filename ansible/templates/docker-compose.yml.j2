@@ -1,24 +1,23 @@
 services:
   postgres:
-    image: postgres:${POSTGRES_VERSION}
-    container_name: ${KEYCLOAK_CONTAINER}
-    hostname: ${KEYCLOAK_CONTAINER}
+    image: postgres:{{postgres_version}}
+    container_name: {{postgres_container_name}}
+    hostname: {{postgres_container_name}}
     ports:
-      - "100.64.0.3:${KEYCLOAK_PG_PORT}:5432"
+      - "100.64.0.3:{{postgres_port}}:5432"
     environment:
-      POSTGRES_DB: ${KEYCLOAK_PG_DB_NAME}
-      POSTGRES_USER: ${KEYCLOAK_PG_USER}
-      POSTGRES_PASSWORD: ${KEYCLOAK_PG_PASSWORD}
+      POSTGRES_DB: {{postgres_db}}
+      POSTGRES_USER: {{postgres_user}}
+      POSTGRES_PASSWORD: {{postgres_password}}
     volumes:
-      - ${KEYCLOAK_DB_LOCATION}:/var/lib/postgresql/data
+      - {{keycloak_db_location}}/pg_data:/var/lib/postgresql/data
     networks:
       - keycloak
-      # - nginx-proxy-network
     healthcheck:
       test:
         [
           "CMD-SHELL",
-          "pg_isready -U ${KEYCLOAK_PG_USER} -d ${KEYCLOAK_PG_DB_NAME}",
+          "pg_isready -U {{postgres_user}} -d {{postgres_db}}",
         ]
       interval: 10s
       timeout: 5s
@@ -27,9 +26,9 @@ services:
     restart: always
 
   keycloak:
-    # image: quay.io/keycloak/keycloak:${KEYCLOAK_VERSION}
+    # image: quay.io/keycloak/keycloak:{{keycloak_version}}
     image: ghcr.io/biostrefa/keycloak-custom:latest
-    container_name: keycloak26
+    container_name: {{ keycloak_container_name }}
     command:
       - start
       - --optimized
@@ -40,43 +39,28 @@ services:
       KC_PROXY_ADDRESS_FORWARDING: "true"
       KC_CACHE: "local"
       KC_HOSTNAME_STRICT: "false"
-      # KC_HOSTNAME: "auth.s.biostrefa.org"
       KC_HOSTNAME: "https://auth.polishlink.info"
       KC_PROXY_HEADERS: "xforwarded"
       KC_HTTP_ENABLED: "true"
       KC_DB: "postgres"
-      KC_DB_URL: "jdbc:postgresql://postgres/${KEYCLOAK_PG_DB_NAME}"
-      KC_DB_USERNAME: ${KEYCLOAK_PG_USER}
-      KC_DB_PASSWORD: ${KEYCLOAK_PG_PASSWORD}
-      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN_NAME}
-      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
-      # VIRTUAL_HOST: "auth.s.biostrefa.org"
-      # VIRTUAL_PORT: "8080"
-      # LETSENCRYPT_HOST: "auth.s.biostrefa.org"
-      # LETSENCRYPT_EMAIL: "oskar@biostrefa.org"
+      KC_DB_URL: "jdbc:postgresql://postgres/{{postgres_db}}"
+      KC_DB_USERNAME: {{postgres_user}}
+      KC_DB_PASSWORD: {{postgres_password}}
+      KEYCLOAK_ADMIN: {{keycloak_admin_name}}
+      KEYCLOAK_ADMIN_PASSWORD: {{keycloak_admin_password}}
       KEYCLOAK_API_KEY: "{{ keycloak_api_key}}"
       WEBHOOK_HTTP_BASE_PATH: "https://demo-api.avizi.org/v1/auth/users/new"
       WEBHOOK_HTTP_AUTH_USERNAME: "kc"
-      WEBHOOK_HTTP_AUTH_PASSWORD: "ZF9f8Q35cH2oLrc74Hxh43mS"
+      WEBHOOK_HTTP_AUTH_PASSWORD: {{ webhook_http_auth_password }}
       WEBHOOK_EVENTS_TAKEN: "REGISTER,REGISTER_ERROR,USER-CREATE"
     networks:
       - keycloak
       - tunnels-network
-      # - nginx-proxy-network
-
     restart: always
-
-# volumes:
-#   keycloak-postgresql:
-#     name: keycloak-postgresql
-#     external: true
 
 networks:
   keycloak:
     name: keycloak
-  # nginx-proxy-network:
-  #   name: nginx-proxy-network
-  #   external: true
   tunnels-network:
     name: tunnels-network
     external: true
