@@ -10,6 +10,13 @@
 #     state: directory
 #     mode: "0755"
 
+- name: Ensure Docker starts automatically at boot
+  ansible.builtin.systemd_service:
+    name: docker.service
+    enabled: true
+    state: started
+  become: true
+
 - name: Ensure the keycloak directories exists
   ansible.builtin.file:
     path: "{{ item }}"
@@ -23,21 +30,14 @@
 
 - name: Set variables from Bitwarden
   set_fact:
-    keycloak_pg_db_name: "{{ lookup('community.general.bitwarden', 'hatchlon_keycloak', field='KEYCLOAK_PG_DB_NAME')[0] }}"
-    keycloak_pg_user: "{{ lookup('community.general.bitwarden', 'hatchlon_keycloak', field='KEYCLOAK_PG_USER')[0] }}"
-    keycloak_pg_password: "{{ lookup('community.general.bitwarden', 'hatchlon_keycloak', field='KEYCLOAK_PG_PASSWORD')[0] }}"
-    keycloak_pg_port: "{{ lookup('community.general.bitwarden', 'hatchlon_keycloak', field='KEYCLOAK_PG_PORT')[0] }}"
+    keycloak_pg_db_name: "{{ lookup('community.general.bitwarden', 'hatchlon_keycloak', field='POSTGRES_DB')[0] }}"
+    keycloak_pg_user: "{{ lookup('community.general.bitwarden', 'hatchlon_keycloak', field='POSTGRES_USER')[0] }}"
+    keycloak_pg_password: "{{ lookup('community.general.bitwarden', 'hatchlon_keycloak', field='POSTGRES_PASSWORD')[0] }}"
+    keycloak_pg_port: "{{ lookup('community.general.bitwarden', 'hatchlon_keycloak', field='POSTGRES_PORT')[0] }}"
     keycloak_admin_name: "{{ lookup('community.general.bitwarden', 'hatchlon_keycloak', field='KEYCLOAK_ADMIN_NAME')[0] }}"
     keycloak_admin_password: "{{ lookup('community.general.bitwarden', 'hatchlon_keycloak', field='KEYCLOAK_ADMIN_PASSWORD')[0] }}"
-
-- name: Debug Bitwarden secrets
-  debug:
-    msg: |
-      Keycloak PG DB Name: {{ keycloak_pg_db_name }}
-      Keycloak PG User: {{ keycloak_pg_user }}
-      Keycloak PG Password: {{ keycloak_pg_password }}
-      Keycloak Admin Name: {{ keycloak_admin_name }}
-      Keycloak Admin Password: {{ keycloak_admin_password }}
+    keycloak_api_key: "{{ lookup('community.general.bitwarden', 'hatchlon_keycloak', field='KEYCLOAK_API_KEY')[0] }}"
+  no_log: true
 
 - name: Generate .env file from template
   template:
@@ -61,7 +61,28 @@
     pull: always
     recreate: always
     # - docker-compose.prod.yml
+  environment:
+    KEYCLOAK_API_KEY: "{{ keycloak_api_key }}"
+  no_log: true
   register: output
+
+- name: Install Keycloak boot startup service
+  ansible.builtin.template:
+    src: keycloak26.service.j2
+    dest: /etc/systemd/system/keycloak26.service
+    owner: root
+    group: root
+    mode: "0644"
+  become: true
+  register: keycloak26_boot_service
+
+- name: Enable Keycloak boot startup service
+  ansible.builtin.systemd_service:
+    name: keycloak26.service
+    enabled: true
+    daemon_reload: true
+    state: "{{ 'restarted' if keycloak26_boot_service.changed else 'started' }}"
+  become: true
 
 - name: Remove uploaded docker-compose file after deployment
   ansible.builtin.file:
@@ -76,79 +97,3 @@
 - name: Show results
   ansible.builtin.debug:
     var: output
-# ---
-# - name: Create Nginx proxy network
-#   community.docker.docker_network:
-#     name: nginx-proxy-network
-#     state: present
-#     driver: bridge
-
-# - name: Create keycloak network
-#   community.docker.docker_network:
-#     name: keycloak
-#     state: present
-#     driver: bridge
-
-# - name: Deploy Keycloak PostgreSQL
-#   community.docker.docker_container:
-#     image: "postgres:{{postgres_version}}"
-#     name: "{{keycloak_container}}"
-#     hostname: "{{keycloak_container}}"
-#     published_ports:
-#       - "127.0.0.1:5666:5432"
-#     env:
-#       POSTGRES_DB: "{{ keycloak_db_name }}"
-#       POSTGRES_USER: "{{ postgres_user }}"
-#       POSTGRES_PASSWORD: "{{ postgres_password }}"
-#     volumes:
-#       - "{{keycloak_db_volume_name}}:/var/lib/postgresql/data"
-#     networks:
-#       - name: keycloak
-#       - name: nginx-proxy-network
-#     healthcheck:
-#       test: ["CMD-SHELL", "pg_isready -U {{ postgres_user }}"]
-#       interval: 10s
-#       timeout: 5s
-#       retries: 5
-#       start_period: 10s
-#     restart_policy: always
-
-# - name: Deploy Keycloak container
-#   community.docker.docker_container:
-#     image: "quay.io/keycloak/keycloak:{{keycloak_version}}"
-#     name: keycloak
-#     # hostname: keycloak
-#     restart_policy: always
-#     # healthcheck:
-#     #   test: ["CMD", "curl", "-f", "http://localhost:8080/health/ready"]
-#     #   interval: 30s
-#     #   timeout: 10s
-#     #   retries: 3
-#     #   start_period: 60s
-#     # command: "start --verbose"
-#     command: start
-
-#     env:
-#       # HTTP_ADDRESS_FORWARDING: true
-#       KC_PROXY_ADDRESS_FORWARDING: "true"
-#       KC_HOSTNAME_STRICT: "false"
-#       KC_HOSTNAME: "auth.s.biostrefa.org"
-#       KC_PROXY: "edge"
-#       KC_HTTP_ENABLED: "true"
-#       KC_DB: "postgres"
-#       KC_DB_URL: "jdbc:postgresql://{{keycloak_container}}/{{ keycloak_db_name }}"
-#       KC_DB_USERNAME: "{{ postgres_user }}"
-#       KC_DB_PASSWORD: "{{ postgres_password }}"
-#       # KC_DB_URL_HOST: "kc-postgres"
-#       # KC_DB_URL_PORT: "5432"
-#       # KC_DB_URL_DATABASE: "keycloak"
-#       KEYCLOAK_ADMIN: "{{ keycloak_admin_name }}"
-#       KEYCLOAK_ADMIN_PASSWORD: "{{ keycloak_admin_password }}"
-#       # *** proxy settings ***
-#       VIRTUAL_HOST: "auth.s.biostrefa.org"
-#       VIRTUAL_PORT: "8080"
-#       LETSENCRYPT_HOST: "auth.s.biostrefa.org"
-#       LETSENCRYPT_EMAIL: "oskar@biostrefa.org"
-#     networks:
-#       - name: keycloak
-#       - name: nginx-proxy-network

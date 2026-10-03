@@ -1,3 +1,6 @@
+Image URL:
+ghcr.io/biostrefa/keycloak-custom:latest
+
 To preview your Keycloak theme, you need to run Keycloak with the custom theme applied. Here are the steps:
 
 ## Build and Run with Docker

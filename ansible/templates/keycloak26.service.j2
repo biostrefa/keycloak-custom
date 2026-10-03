@@ -1,0 +1,22 @@
+[Unit]
+Description=Start Keycloak 26 containers after boot
+Requires=docker.service
+Wants=network-online.target
+After=docker.service network-online.target tailscaled.service
+# PostgreSQL binds to a Tailscale address that may appear after daemon startup.
+StartLimitIntervalSec=0
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+# Use existing containers: the role removes Compose files and secrets.
+# If PostgreSQL cannot bind its port yet, retry before starting Keycloak.
+ExecStart=/usr/bin/docker start kc-postgres26
+ExecStart=/usr/bin/docker start keycloak26
+Restart=on-failure
+RestartSec=15s
+TimeoutStartSec=120s
+# No ExecStop: Docker's restart policies continue to manage the containers.
+
+[Install]
+WantedBy=multi-user.target

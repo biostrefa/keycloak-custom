@@ -15,7 +15,11 @@ services:
       - keycloak
       # - nginx-proxy-network
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U ${KEYCLOAK_PG_USER} -d ${KEYCLOAK_PG_DB_NAME}" ]
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${KEYCLOAK_PG_USER} -d ${KEYCLOAK_PG_DB_NAME}",
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -26,18 +30,22 @@ services:
     # image: quay.io/keycloak/keycloak:${KEYCLOAK_VERSION}
     image: ghcr.io/biostrefa/keycloak-custom:latest
     container_name: keycloak26
-    command: start
+    command:
+      - start
+      - --optimized
+      - --cache=local
     ports:
       - "8059:8080"
     environment:
       KC_PROXY_ADDRESS_FORWARDING: "true"
+      KC_CACHE: "local"
       KC_HOSTNAME_STRICT: "false"
       # KC_HOSTNAME: "auth.s.biostrefa.org"
       KC_HOSTNAME: "https://auth.polishlink.info"
-      KC_PROXY: "edge"
+      KC_PROXY_HEADERS: "xforwarded"
       KC_HTTP_ENABLED: "true"
       KC_DB: "postgres"
-      KC_DB_URL: "jdbc:postgresql://${KEYCLOAK_CONTAINER}/${KEYCLOAK_PG_DB_NAME}"
+      KC_DB_URL: "jdbc:postgresql://postgres/${KEYCLOAK_PG_DB_NAME}"
       KC_DB_USERNAME: ${KEYCLOAK_PG_USER}
       KC_DB_PASSWORD: ${KEYCLOAK_PG_PASSWORD}
       KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN_NAME}
@@ -46,15 +54,16 @@ services:
       # VIRTUAL_PORT: "8080"
       # LETSENCRYPT_HOST: "auth.s.biostrefa.org"
       # LETSENCRYPT_EMAIL: "oskar@biostrefa.org"
-      KEYCLOAK_API_KEY: ${KEYCLOAK_API_KEY}
+      KEYCLOAK_API_KEY: "{{ keycloak_api_key}}"
       WEBHOOK_HTTP_BASE_PATH: "https://demo-api.avizi.org/v1/auth/users/new"
       WEBHOOK_HTTP_AUTH_USERNAME: "kc"
-      WEBHOOK_HTTP_AUTH_PASSWORD: "kcpass1234"
+      WEBHOOK_HTTP_AUTH_PASSWORD: "ZF9f8Q35cH2oLrc74Hxh43mS"
       WEBHOOK_EVENTS_TAKEN: "REGISTER,REGISTER_ERROR,USER-CREATE"
     networks:
       - keycloak
-      # - nginx-proxy-network
       - tunnels-network
+      # - nginx-proxy-network
+
     restart: always
 
 # volumes:
