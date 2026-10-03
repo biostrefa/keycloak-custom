@@ -1,5 +1,5 @@
 
-# Production-ready, optimized Keycloak 26.4 image with:
+# Production-ready, optimized Keycloak 26.8 image with:
 # - custom provider JARs
 # - custom login theme
 # - optimized for production
@@ -17,7 +17,7 @@
 #         ├── email/          # optional
 #         └── theme.properties
 
-ARG KEYCLOAK_VERSION=26.6.0
+ARG KEYCLOAK_VERSION=26.8.0
 
 FROM quay.io/keycloak/keycloak:${KEYCLOAK_VERSION} AS builder
 
